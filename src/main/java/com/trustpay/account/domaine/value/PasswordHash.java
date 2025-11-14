@@ -1,4 +1,3 @@
 package com.trustpay.account.domaine.value;
 
-public record Password() {
-}
+public record PasswordHash() {}
