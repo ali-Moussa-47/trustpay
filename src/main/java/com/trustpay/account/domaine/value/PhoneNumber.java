@@ -10,9 +10,7 @@ public record PhoneNumber(String value) {
 
   private void validate(String value) {
     if (StringUtils.isBlank(value)) {
-      throw new PhoneNumberInvalidException(
-        "Phone number cannot be null or empty."
-      );
+      throw new PhoneNumberInvalidException("Phone number cannot be null or empty.");
     }
   }
 
