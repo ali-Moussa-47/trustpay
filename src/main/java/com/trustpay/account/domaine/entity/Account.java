@@ -1,23 +1,19 @@
 package com.trustpay.account.domaine.entity;
 
-import com.trustpay.account.domaine.exception.*;
-import com.trustpay.account.domaine.service.PasswordHasher;
+import com.trustpay.account.domaine.exception.CannotChangePasswordForOAuthAccountException;
 import com.trustpay.account.domaine.value.*;
+import java.util.Collections;
 import java.util.Set;
+import lombok.Getter;
 
+@Getter
 public class Account {
 
   private final AccountId accountId;
   private final Email email;
   private final PhoneNumber phoneNumber;
   private final AuthProvider authProvider;
-
-  /**
-   * Liste des méthodes d'authentification supportées par ce compte.
-   * Ex : [PASSWORD] ou [OAUTH] ou [PASSWORD, OTP]
-   */
   private final Set<AuthMethod> supportedMethods;
-
   private PasswordHash passwordHash;
 
   public Account(
@@ -32,7 +28,7 @@ public class Account {
     this.email = email;
     this.phoneNumber = phoneNumber;
     this.authProvider = authProvider;
-    this.supportedMethods = supportedMethods;
+    this.supportedMethods = Collections.unmodifiableSet(supportedMethods);
     this.passwordHash = passwordHash;
   }
 
@@ -40,31 +36,13 @@ public class Account {
     return supportedMethods.contains(method);
   }
 
-  public boolean authenticate(PasswordHasher hasher, PlainPassword rawPassword) {
-    if (!supports(AuthMethod.PASSWORD)) {
-      throw new UnsupportedAuthMethodException(
-        "This account does not support password authentication"
-      );
-    }
-
-    if (passwordHash == null) {
-      throw new InvalidPasswordHashException("Missing password hash for account");
-    }
-
-    return hasher.match(rawPassword, passwordHash);
-  }
-
-  public void changePassword(PasswordHasher hasher, PlainPassword newPassword) {
+  public void changePasswordHash(PasswordHash newHash) {
     if (!supports(AuthMethod.PASSWORD)) {
       throw new CannotChangePasswordForOAuthAccountException(
         "This account cannot change password because it does not support PASSWORD method"
       );
     }
 
-    this.passwordHash = hasher.hash(newPassword);
-  }
-
-  public AccountId getAccountId() {
-    return accountId;
+    this.passwordHash = newHash;
   }
 }

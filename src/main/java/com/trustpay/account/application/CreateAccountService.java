@@ -3,14 +3,13 @@ package com.trustpay.account.application;
 import com.trustpay.account.application.dto.CreateAccountDto;
 import com.trustpay.account.domaine.AccountRepository;
 import com.trustpay.account.domaine.entity.Account;
-import com.trustpay.account.domaine.exception.DuplicateEmailException;
-import com.trustpay.account.domaine.exception.DuplicatePhoneNumberException;
-import com.trustpay.account.domaine.exception.MissingPasswordException;
-import com.trustpay.account.domaine.exception.UnsupportedAuthProviderException;
+import com.trustpay.account.domaine.exception.*;
 import com.trustpay.account.domaine.factory.AccountCreationStrategy;
 import com.trustpay.account.domaine.value.*;
 import java.util.Map;
+import org.springframework.stereotype.Service;
 
+@Service
 public class CreateAccountService {
 
   private final AccountRepository repository;
@@ -33,12 +32,16 @@ public class CreateAccountService {
     }
 
     Email email = new Email(dto.email());
-    PhoneNumber phone = new PhoneNumber(dto.phoneNumber());
+
+    PhoneNumber phone = dto.phoneNumber() != null
+      ? new PhoneNumber(dto.phoneNumber())
+      : null;
+
     PlainPassword password = dto.password() != null
       ? new PlainPassword(dto.password())
       : null;
 
-    validateBeforeCreation(provider, email, phone, password);
+    validate(provider, email, phone, password);
 
     Account account = strategy.create(AccountId.newId(), email, phone, password);
 
@@ -47,21 +50,28 @@ public class CreateAccountService {
     return account.getAccountId();
   }
 
-  private void validateBeforeCreation(
+  private void validate(
     AuthProvider provider,
     Email email,
     PhoneNumber phone,
     PlainPassword password
   ) {
-    if (provider == AuthProvider.LOCAL && password == null) {
-      throw new MissingPasswordException("Password required for LOCAL provider");
+    if (provider == AuthProvider.LOCAL) {
+      if (password == null) {
+        throw new MissingPasswordException("Password required for LOCAL provider");
+      }
+
+      if (phone == null) {
+        throw new PhoneNumberInvalidException("Phone number required for LOCAL provider");
+      }
     }
 
     if (repository.existsByEmail(email)) {
       throw new DuplicateEmailException("Email already registered");
     }
+    if (AuthProvider.GOOGLE == provider) {}
 
-    if (repository.existsByPhone(phone)) {
+    if (phone != null && repository.existsByPhone(phone)) {
       throw new DuplicatePhoneNumberException("Phone number already registered");
     }
   }
